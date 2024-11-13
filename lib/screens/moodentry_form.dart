@@ -1,5 +1,9 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:mental_health_tracker/screens/menu.dart';
 import 'package:mental_health_tracker/widgets/left_drawer.dart';
+import 'package:pbp_django_auth/pbp_django_auth.dart';
+import 'package:provider/provider.dart';
 
 class MoodEntryFormPage extends StatefulWidget {
   const MoodEntryFormPage({super.key});
@@ -16,6 +20,7 @@ class _MoodEntryFormPageState extends State<MoodEntryFormPage> {
 
   @override
   Widget build(BuildContext context) {
+    final request = context.watch<CookieRequest>();
     return Scaffold(
       appBar: AppBar(
         title: const Center(
@@ -33,6 +38,7 @@ class _MoodEntryFormPageState extends State<MoodEntryFormPage> {
             child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Mood Input
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: TextFormField(
@@ -56,6 +62,7 @@ class _MoodEntryFormPageState extends State<MoodEntryFormPage> {
                 },
               ),
             ),
+            // Feelings Input
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: TextFormField(
@@ -79,6 +86,7 @@ class _MoodEntryFormPageState extends State<MoodEntryFormPage> {
                 },
               ),
             ),
+            // Mood Intensity Input
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: TextFormField(
@@ -89,6 +97,7 @@ class _MoodEntryFormPageState extends State<MoodEntryFormPage> {
                     borderRadius: BorderRadius.circular(5.0),
                   ),
                 ),
+                keyboardType: TextInputType.number,
                 onChanged: (String? value) {
                   setState(() {
                     _moodIntensity = int.tryParse(value!) ?? 0;
@@ -105,44 +114,51 @@ class _MoodEntryFormPageState extends State<MoodEntryFormPage> {
                 },
               ),
             ),
+            // Save Button
             Align(
               alignment: Alignment.bottomCenter,
               child: Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: ElevatedButton(
                   style: ButtonStyle(
-                    backgroundColor: WidgetStateProperty.all(
+                    backgroundColor: MaterialStateProperty.all(
                         Theme.of(context).colorScheme.primary),
                   ),
-                  onPressed: () {
+                  onPressed: () async {
                     if (_formKey.currentState!.validate()) {
-                      showDialog(
-                        context: context,
-                        builder: (context) {
-                          return AlertDialog(
-                            title: const Text('Mood berhasil tersimpan'),
-                            content: SingleChildScrollView(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('Mood: $_mood'),
-                                  Text('Feelings: $_feelings'),
-                                  Text('Mood Intensity: $_moodIntensity'),
-                                ],
-                              ),
-                            ),
-                            actions: [
-                              TextButton(
-                                child: const Text('OK'),
-                                onPressed: () {
-                                  Navigator.pop(context);
-                                  _formKey.currentState!.reset();
-                                },
-                              ),
-                            ],
-                          );
-                        },
+                      // Kirim ke Django dan tunggu respons
+                      // Ganti URL dengan URL aplikasi Django Anda dan tambahkan trailing slash
+                      final response = await request.postJson(
+                        "http://127.0.0.1:8000/create-flutter/",
+                        jsonEncode(<String, String>{
+                          'mood': _mood,
+                          'mood_intensity': _moodIntensity.toString(),
+                          'feelings': _feelings,
+                          // Tambahkan field lainnya jika diperlukan
+                        }),
                       );
+
+                      if (context.mounted) {
+                        if (response['status'] == 'success') {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text("Mood baru berhasil disimpan!"),
+                            ),
+                          );
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => MyHomePage()),
+                          );
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                  "Terdapat kesalahan, silakan coba lagi."),
+                            ),
+                          );
+                        }
+                      }
                     }
                   },
                   child: const Text(

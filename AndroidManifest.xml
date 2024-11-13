@@ -1,0 +1,4 @@
+  <application>
+</application>
+<!-- Required to fetch data from the Internet. -->
+<uses-permission android:name="android.permission.INTERNET" />
